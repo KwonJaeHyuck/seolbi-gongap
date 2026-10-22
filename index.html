@@ -534,6 +534,15 @@ A가 5초인지 재기</div></div><div style="display: flex; flex-direction: col
       var items = builds.filter(function (b) { return b.ord === o; });
       return { items: items, auto: items.every(function (b) { return b.auto; }) };
     });
+    // 그림 받기가 실패하면(느린 망·서버가 끊음) 조금 뒤 두 번까지 다시 받는다
+    sec.querySelectorAll('img').forEach(function (im) {
+      im.addEventListener('error', function () {
+        var n = +(im.dataset.retry || 0);
+        if (n >= 2) return;
+        im.dataset.retry = n + 1;
+        setTimeout(function () { im.src = im.src.split('?')[0] + '?r=' + (n + 1); }, 800 * (n + 1));
+      });
+    });
     stage.appendChild(sec);
     slides.push({ sec: sec, steps: steps, tr: sec.getAttribute('data-transition') || 'fade' });
   });
@@ -724,6 +733,13 @@ A가 5초인지 재기</div></div><div style="display: flex; flex-direction: col
   jump(isNaN(start) ? 0 : start - 1);
   var hint = document.getElementById('hint');
   setTimeout(function () { hint.style.opacity = '0'; }, 3500);
-  window.__deck = { next: next, prev: prev, jump: jump, state: function () { return { slide: cur + 1, step: step, of: slides.length }; } };
+  // settle: 기다리는 자동 단계를 바로 다 진행하고 효과를 끝낸다 (단계별 비교 찍기용)
+  function settle() {
+    for (var g = 0; g < 60 && timer; g++) { clearTimeout(timer); timer = null; finishAll(); buildNext(); }
+    finishAll();
+  }
+  window.__deck = { next: next, prev: prev, jump: jump, settle: settle,
+    state: function () { return { slide: cur + 1, step: step, of: slides.length, steps: slides[cur].steps.length,
+      clicks: slides[cur].steps.filter(function (s) { return !s.auto; }).length }; } };
 })();
 </script></body></html>
